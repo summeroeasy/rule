@@ -1,0 +1,84 @@
+name: Generate Subscription Links
+
+on:
+  push:
+    paths:
+      - 'direct.list'
+      - 'proxy.list'
+
+jobs:
+  generate_subscriptions:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install required packages
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml
+
+    - name: Generate Subscription Files
+      run: |
+        # Create subscription YAML for Clash
+        echo "proxies:" > clash-subscription.yaml
+        echo "  - name: \"edgetunnel\"" >> clash-subscription.yaml
+        echo "    type: vless" >> clash-subscription.yaml
+        echo "    server: 2d6116c0.testvvq.pages.dev" >> clash-subscription.yaml
+        echo "    port: 443" >> clash-subscription.yaml
+        echo "    uuid: 9e627f2b-550a-41c7-9fe2-7e9899930a08" >> clash-subscription.yaml
+        echo "    tls: true" >> clash-subscription.yaml
+        echo "    alpn:" >> clash-subscription.yaml
+        echo "      - h3" >> clash-subscription.yaml
+        echo "    udp: false" >> clash-subscription.yaml
+        echo "    sni: 2d6116c0.testvvq.pages.dev" >> clash-subscription.yaml
+        echo "    tfo: false" >> clash-subscription.yaml
+        echo "    skip-cert-verify: true" >> clash-subscription.yaml
+        echo "    servername: 2d6116c0.testvvq.pages.dev" >> clash-subscription.yaml
+        echo "    client-fingerprint: randomized" >> clash-subscription.yaml
+        echo "    network: ws" >> clash-subscription.yaml
+        echo "    ws-opts:" >> clash-subscription.yaml
+        echo "      path: \"/?ed=2560\"" >> clash-subscription.yaml
+        echo "      headers:" >> clash-subscription.yaml
+        echo "        2d6116c0.testvvq.pages.dev: \"\"" >> clash-subscription.yaml
+
+        # Add proxy group to Clash subscription file
+        echo "proxy-groups:" >> clash-subscription.yaml
+        echo "  - name: \"Auto\"" >> clash-subscription.yaml
+        echo "    type: select" >> clash-subscription.yaml
+        echo "    proxies:" >> clash-subscription.yaml
+        echo "      - edgetunnel" >> clash-subscription.yaml
+        echo "      - DIRECT" >> clash-subscription.yaml
+
+        # Add rules to Clash subscription file
+        echo "rule-providers:" >> clash-subscription.yaml
+        echo "  direct:" >> clash-subscription.yaml
+        echo "    type: http" >> clash-subscription.yaml
+        echo "    behavior: domain" >> clash-subscription.yaml
+        echo "    url: \"https://raw.githubusercontent.com/<你的GitHub用户名>/rule/main/direct.list\"" >> clash-subscription.yaml
+        echo "    interval: 86400" >> clash-subscription.yaml
+        echo "  proxy:" >> clash-subscription.yaml
+        echo "    type: http" >> clash-subscription.yaml
+        echo "    behavior: domain" >> clash-subscription.yaml
+        echo "    url: \"https://raw.githubusercontent.com/<你的GitHub用户名>/rule/main/proxy.list\"" >> clash-subscription.yaml
+        echo "    interval: 86400" >> clash-subscription.yaml
+
+        echo "rules:" >> clash-subscription.yaml
+        echo "  - RULE-SET,direct,DIRECT" >> clash-subscription.yaml
+        echo "  - RULE-SET,proxy,Auto" >> clash-subscription.yaml
+        echo "  - MATCH,Auto" >> clash-subscription.yaml
+
+        # Save Clash Subscription YAML to the repository
+        echo "Clash subscription YAML generated successfully!"
+
+    - name: Upload the subscription file as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: clash-subscription
+        path: clash-subscription.yaml
